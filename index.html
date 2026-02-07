@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Scope Analyzer & Red Flag Detector</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.95;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+
+        .input-section {
+            margin-bottom: 20px;
+        }
+
+        .input-section label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: inherit;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .analyze-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .analyze-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .analyze-btn:active {
+            transform: translateY(0);
+        }
+
+        .results {
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .rating-badge {
+            display: inline-block;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.5em;
+            font-weight: 700;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .rating-green {
+            background: #10b981;
+            color: white;
+        }
+
+        .rating-yellow {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .rating-red {
+            background: #ef4444;
+            color: white;
+        }
+
+        .score-display {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .score-circle {
+            display: inline-block;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 8px solid #e0e0e0;
+            position: relative;
+            margin: 10px auto;
+        }
+
+        .score-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2em;
+            font-weight: 700;
+        }
+
+        .section {
+            margin: 25px 0;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .flag-item {
+            display: flex;
+            align-items: flex-start;
+            margin: 12px 0;
+            padding: 12px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .flag-icon {
+            font-size: 1.5em;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .flag-content {
+            flex: 1;
+        }
+
+        .flag-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .flag-description {
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        .recommendation {
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .rec-avoid {
+            background: #fee;
+            color: #c00;
+            border: 2px solid #c00;
+        }
+
+        .rec-negotiate {
+            background: #fef3cd;
+            color: #856404;
+            border: 2px solid #ffc107;
+        }
+
+        .rec-bid {
+            background: #d1fae5;
+            color: #065f46;
+            border: 2px solid #10b981;
+        }
+
+        .question-list {
+            list-style: none;
+        }
+
+        .question-list li {
+            padding: 10px 15px;
+            margin: 8px 0;
+            background: white;
+            border-radius: 8px;
+            border-left: 3px solid #667eea;
+        }
+
+        .template-response {
+            background: #f0f9ff;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #0ea5e9;
+            margin: 15px 0;
+        }
+
+        .template-response h4 {
+            color: #0369a1;
+            margin-bottom: 10px;
+        }
+
+        .template-text {
+            font-style: italic;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .cost-calculator {
+            background: #fff7ed;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border: 2px solid #f97316;
+        }
+
+        .cost-calculator h4 {
+            color: #ea580c;
+            margin-bottom: 15px;
+        }
+
+        .cost-input {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .cost-input input {
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 1em;
+            width: 150px;
+        }
+
+        .cost-result {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚩 Project Scope Analyzer</h1>
+            <p>Detect red flags & protect yourself from scope creep</p>
+        </div>
+
+        <div class="card">
+            <div class="input-section">
+                <label for="projectInput">Paste the client message or job description:</label>
+                <textarea id="projectInput" placeholder="Example: 'I need a simple website. Nothing fancy, just a few pages. Maybe add e-commerce later. Also need it by tomorrow. Budget is $200 but great for your portfolio!'"></textarea>
+            </div>
+            <button class="analyze-btn" onclick="analyzeProject()">🔍 Analyze Project</button>
+        </div>
+
+        <div id="results" class="results">
+            <div class="card">
+                <div class="score-display">
+                    <h2>Scope Clarity Score</h2>
+                    <div class="score-circle" id="scoreCircle">
+                        <div class="score-text" id="scoreText">0%</div>
+                    </div>
+                </div>
+
+                <div style="text-align: center;">
+                    <div class="rating-badge" id="ratingBadge">🟢 GREEN - Low Risk</div>
+                </div>
+
+                <div class="recommendation" id="recommendation"></div>
+
+                <div class="section" id="flagsSection">
+                    <h3>🚩 Red Flags Detected</h3>
+                    <div id="flagsList"></div>
+                </div>
+
+                <div class="section" id="scopeSection">
+                    <h3>📊 Scope Analysis</h3>
+                    <div id="scopeAnalysis"></div>
+                </div>
+
+                <div class="section">
+                    <h3>❓ Questions to Ask the Client</h3>
+                    <ul class="question-list" id="questionsList"></ul>
+                </div>
+
+                <div class="section">
+                    <h3>🛡️ Protect Yourself</h3>
+                    <div id="protectionTips"></div>
+                </div>
+
+                <div class="cost-calculator">
+                    <h4>💰 Scope Change Cost Calculator</h4>
+                    <p>If the scope increases, here's what to charge extra:</p>
+                    <div class="cost-input">
+                        <label>Original Quote: $</label>
+                        <input type="number" id="originalCost" placeholder="1000" value="1000">
+                    </div>
+                    <div class="cost-input">
+                        <label>Scope Increase:</label>
+                        <input type="number" id="scopeIncrease" placeholder="20" value="20" min="1" max="200">
+                        <span>%</span>
+                    </div>
+                    <button class="analyze-btn" style="margin-top: 10px;" onclick="calculateCost()">Calculate</button>
+                    <div class="cost-result" id="costResult" style="display:none;"></div>
+                </div>
+
+                <div class="template-response">
+                    <h4>📧 Template Response</h4>
+                    <div class="template-text" id="templateText"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const redFlags = {
+            scopeCreep: {
+                patterns: ['might need', 'could add', 'maybe also', 'and more', 'possibly', 'we may want', 'future features', 'eventually', 'down the road'],
+                icon: '⚠️',
+                title: 'Scope Creep Indicator',
+                severity: 'high'
+            },
+            budgetIssues: {
+                patterns: ['exposure', 'portfolio piece', 'low budget', 'quick project', 'cheap', 'free', 'no budget', 'limited budget', 'tight budget', 'great exposure'],
+                icon: '🚩',
+                title: 'Budget Red Flag',
+                severity: 'critical'
+            },
+            vagueRequirements: {
+                patterns: ['something like', 'similar to', 'you know', 'figure it out', 'creative freedom', 'surprise me', 'just make it work'],
+                icon: '📝',
+                title: 'Unclear Requirements',
+                severity: 'high'
+            },
+            timelineIssues: {
+                patterns: ['asap', 'urgent', 'today', 'immediately', 'rush', 'quick turnaround', 'as soon as possible', 'by tomorrow', 'this week'],
+                icon: '⏰',
+                title: 'Unrealistic Timeline',
+                severity: 'high'
+            },
+            revisionTraps: {
+                patterns: ['unlimited revisions', 'perfect', 'exactly like', 'must be perfect', 'keep revising', 'until i like it', 'not satisfied'],
+                icon: '🔄',
+                title: 'Revision Trap',
+                severity: 'critical'
+            },
+            communicationFlags: {
+                patterns: ['!!!', 'must', 'need now', 'demanding', 'have to', 'require'],
+                icon: '💬',
+                title: 'Communication Red Flag',
+                severity: 'medium'
+            }
+        };
+
+        function analyzeProject() {
+            const input = document.getElementById('projectInput').value.toLowerCase();
+            
+            if (!input.trim()) {
+                alert('Please paste a project description first!');
+                return;
+            }
+
+            const detectedFlags = [];
+            let totalSeverity = 0;
+
+            // Detect flags
+            for (const [key, flag] of Object.entries(redFlags)) {
+                const matches = flag.patterns.filter(pattern => input.includes(pattern));
+                if (matches.length > 0) {
+                    detectedFlags.push({
+                        ...flag,
+                        matches: matches,
+                        category: key
+                    });
+                    totalSeverity += flag.severity === 'critical' ? 3 : flag.severity === 'high' ? 2 : 1;
+                }
+            }
+
+            // Calculate scope clarity score
+            const definedTerms = ['deliverables', 'deadline', 'budget', 'requirements', 'specifications', 'scope', 'milestones'].filter(term => input.includes(term)).length;
+            const vagueTerms = ['maybe', 'could', 'might', 'possibly', 'perhaps', 'something'].filter(term => input.includes(term)).length;
+            const clarityScore = Math.max(0, Math.min(100, (definedTerms * 15) - (vagueTerms * 10) - (totalSeverity * 5) + 30));
+
+            // Determine rating
+            let rating, ratingClass, recommendation;
+            if (clarityScore >= 70 && detectedFlags.length <= 1) {
+                rating = '🟢 GREEN - Low Risk';
+                ratingClass = 'rating-green';
+                recommendation = '✅ BID: This project looks well-defined. Consider bidding with confidence.';
+            } else if (clarityScore >= 40 || detectedFlags.length <= 3) {
+                rating = '🟡 YELLOW - Medium Risk';
+                ratingClass = 'rating-yellow';
+                recommendation = '⚠️ NEGOTIATE: Address the red flags before committing. Ask clarifying questions and set boundaries.';
+            } else {
+                rating = '🔴 RED - High Risk';
+                ratingClass = 'rating-red';
+                recommendation = '🚫 AVOID: Too many red flags. This project is likely to cause problems. If you proceed, charge premium rates and use a strict contract.';
+            }
+
+            // Display results
+            document.getElementById('scoreText').textContent = clarityScore + '%';
+            document.getElementById('scoreCircle').style.borderColor = clarityScore >= 70 ? '#10b981' : clarityScore >= 40 ? '#f59e0b' : '#ef4444';
+            document.getElementById('ratingBadge').textContent = rating;
+            document.getElementById('ratingBadge').className = 'rating-badge ' + ratingClass;
+            document.getElementById('recommendation').textContent = recommendation;
+            document.getElementById('recommendation').className = 'recommendation ' + (clarityScore >= 70 ? 'rec-bid' : clarityScore >= 40 ? 'rec-negotiate' : 'rec-avoid');
+
+            // Display flags
+            const flagsList = document.getElementById('flagsList');
+            if (detectedFlags.length === 0) {
+                flagsList.innerHTML = '<p style="color: #10b981; font-weight: 600;">✅ No major red flags detected!</p>';
+            } else {
+                flagsList.innerHTML = detectedFlags.map(flag => `
+                    <div class="flag-item">
+                        <div class="flag-icon">${flag.icon}</div>
+                        <div class="flag-content">
+                            <div class="flag-title">${flag.title}</div>
+                            <div class="flag-description">Found: "${flag.matches.join('", "')}"</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // Scope analysis
+            const scopeAnalysis = document.getElementById('scopeAnalysis');
+            const definedItems = definedTerms;
+            const undefinedItems = vagueTerms + detectedFlags.filter(f => f.category === 'vagueRequirements').length;
+            scopeAnalysis.innerHTML = `
+                <p><strong>Defined Scope Items:</strong> ${definedItems} ✅</p>
+                <p><strong>Undefined/Vague Items:</strong> ${undefinedItems} ⚠️</p>
+                <p style="margin-top: 10px; color: ${undefinedItems > definedItems ? '#dc2626' : '#059669'};">
+                    ${undefinedItems > definedItems ? '⚠️ Warning: More undefined items than defined. High risk of scope creep!' : '✅ Scope is reasonably well-defined.'}
+                </p>
+            `;
+
+            // Questions to ask
+            const questions = generateQuestions(detectedFlags, input);
+            document.getElementById('questionsList').innerHTML = questions.map(q => `<li>${q}</li>`).join('');
+
+            // Protection tips
+            const tips = generateProtectionTips(detectedFlags, clarityScore);
+            document.getElementById('protectionTips').innerHTML = tips;
+
+            // Template response
+            document.getElementById('templateText').textContent = generateTemplate(detectedFlags);
+
+            // Show results
+            document.getElementById('results').classList.add('show');
+            document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function generateQuestions(flags, input) {
+            const questions = [
+                'Can you provide a detailed list of all deliverables?',
+                'What is your firm deadline for this project?',
+                'What is your total budget range?'
+            ];
+
+            if (flags.some(f => f.category === 'scopeCreep')) {
+                questions.push('Are the "possible additions" part of the initial scope, or will they be separate projects?');
+                questions.push('What features are must-haves vs nice-to-haves?');
+            }
+
+            if (flags.some(f => f.category === 'vagueRequirements')) {
+                questions.push('Can you share examples or references of exactly what you want?');
+                questions.push('What specific functionality do you need in detail?');
+            }
+
+            if (flags.some(f => f.category === 'revisionTraps')) {
+                questions.push('How many rounds of revisions are included in your budget?');
+                questions.push('What is your approval process?');
+            }
+
+            if (flags.some(f => f.category === 'timelineIssues')) {
+                questions.push('Is this timeline flexible, or is it a hard deadline? Why the urgency?');
+            }
+
+            if (!input.includes('budget')) {
+                questions.push('What is your budget for this project?');
+            }
+
+            return questions;
+        }
+
+        function generateProtectionTips(flags, score) {
+            let tips = '<ul style="list-style: none; padding: 0;">';
+            
+            tips += '<li style="margin: 10px 0;">✍️ <strong>Get everything in writing:</strong> Use a clear contract that lists all deliverables, timelines, and payment terms.</li>';
+            
+            if (score < 60) {
+                tips += '<li style="margin: 10px 0;">📋 <strong>Create a detailed scope document:</strong> Before starting, write out every single deliverable and get client sign-off.</li>';
+            }
+
+            tips += '<li style="margin: 10px 0;">🔒 <strong>Include a scope change clause:</strong> "Any additions or changes to the agreed scope will require a separate quote and timeline."</li>';
+            
+            if (flags.some(f => f.category === 'revisionTraps')) {
+                tips += '<li style="margin: 10px 0;">🔄 <strong>Limit revisions:</strong> "Includes 2 rounds of revisions. Additional revisions billed at $X/hour."</li>';
+            }
+
+            if (flags.some(f => f.category === 'budgetIssues')) {
+                tips += '<li style="margin: 10px 0;">💰 <strong>50% upfront payment:</strong> Never start work without a deposit.</li>';
+            }
+
+            tips += '<li style="margin: 10px 0;">📧 <strong>Communicate changes:</strong> If the client requests anything outside the scope, send a written quote before doing the work.</li>';
+            tips += '</ul>';
+
+            return tips;
+        }
+
+        function generateTemplate(flags) {
+            if (flags.length === 0) {
+                return "Thanks for reaching out! Your project description looks clear. I'd be happy to send you a detailed quote. When would be a good time to discuss the specifics?";
+            }
+
+            return "Thanks for your interest! I'd love to help with this project. Before I can provide an accurate quote, I need to clarify a few details to ensure we're aligned on scope and expectations:\n\n" +
+                   "1. Can you provide a complete list of deliverables?\n" +
+                   "2. What's your budget range for this work?\n" +
+                   "3. What's your ideal timeline (and is it flexible)?\n" +
+                   "4. How many revision rounds do you expect?\n\n" +
+                   "Once I understand the full scope, I'll send you a detailed proposal with timeline and pricing. Looking forward to working together!";
+        }
+
+        function calculateCost() {
+            const original = parseFloat(document.getElementById('originalCost').value) || 0;
+            const increase = parseFloat(document.getElementById('scopeIncrease').value) || 0;
+            
+            if (original <= 0 || increase <= 0) {
+                alert('Please enter valid amounts');
+                return;
+            }
+
+            const additional = (original * increase) / 100;
+            const newTotal = original + additional;
+
+            const resultDiv = document.getElementById('costResult');
+            resultDiv.innerHTML = `
+                <strong>Original Quote:</strong> $${original.toFixed(2)}<br>
+                <strong>Scope Increase:</strong> ${increase}%<br>
+                <strong style="color: #ea580c;">Additional Charge:</strong> $${additional.toFixed(2)}<br>
+                <strong style="color: #059669; font-size: 1.2em;">New Total:</strong> $${newTotal.toFixed(2)}
+            `;
+            resultDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
